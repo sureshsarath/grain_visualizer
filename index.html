@@ -91,7 +91,14 @@
             <select id="basemap-select">
                 <option value="standard" selected>Standard</option>
                 <option value="satellite">Satellite</option>
+                <option value="night">Night</option>
             </select>
+        </div>
+        <div class="map-logo">
+            <a href="https://saswe.net" target="_blank" rel="noopener">
+                <img class="logo-saswe" src="assets/saswe_logo.png" alt="SASWE logo" />
+            </a>
+            <img class="logo-uw" src="assets/uw_logo.png" alt="University of Washington logo" />
         </div>
         <div class="debug" id="debug">Booting…</div>
     </main>
@@ -101,12 +108,12 @@
         <div class="footer-logos">
             <span class="footer-logo-text footer-logo-uw">
                 <span class="footer-logo-sub">Maintained by </span>
-                <span class="footer-strong">Sarath Suresh</span>,
-                <span class="footer-logo-sub"> University of Washington</span>
+                <span class="footer-strong">Sarath Suresh</span>
+                <span class="footer-logo-sub">, University of Washington</span>
             </span>
         </div>
         <div class="footer-logos">
-            <a class="footer-logo-link" href="https://saswe.net" target="_blank" rel="noopener">SASWE Labs</a>
+            <span class="footer-logo-text footer-logo-sub">Department of Civil and Environment Engineering</span>
         </div>
     </footer>
 
@@ -149,11 +156,22 @@
                         tiles: ["https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
                         tileSize: 256,
                         attribution: "© Esri"
+                    },
+                    carto_dark: {
+                        type: "raster",
+                        tiles: [
+                            "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+                            "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+                            "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+                        ],
+                        tileSize: 256,
+                        attribution: "© OpenStreetMap contributors © CARTO"
                     }
                 },
                 layers: [
                     { id: "osm", type: "raster", source: "osm" },
-                    { id: "esri-imagery", type: "raster", source: "esri_imagery", layout: { visibility: "none" } }
+                    { id: "esri-imagery", type: "raster", source: "esri_imagery", layout: { visibility: "none" } },
+                    { id: "carto-dark", type: "raster", source: "carto_dark", layout: { visibility: "none" } }
                 ]
             },
             center: [0, 20],
@@ -182,7 +200,7 @@
                 source: "grain",
                 "source-layer": sourceLayer,
                 paint: {
-                    "line-color": "blue", /* Tailwind blue-600 */
+                    "line-color": "red", /* Tailwind blue-600 */
                     "line-opacity": 0.9,
                     "line-width": [
                         "interpolate", ["linear"], ["zoom"],
@@ -248,10 +266,17 @@
 
         const basemapSelect = document.getElementById("basemap-select");
         basemapSelect.addEventListener("change", () => {
-            const isStandard = basemapSelect.value === "standard";
+            const selected = basemapSelect.value;
+            const isStandard = selected === "standard";
+            const isSatellite = selected === "satellite";
+            const isNight = selected === "night";
+
             map.setLayoutProperty("osm", "visibility", isStandard ? "visible" : "none");
-            map.setLayoutProperty("esri-imagery", "visibility", isStandard ? "none" : "visible");
-            map.setPaintProperty("grain-lines", "line-color", isStandard ? "blue" : "#00C1FF");
+            map.setLayoutProperty("esri-imagery", "visibility", isSatellite ? "visible" : "none");
+            map.setLayoutProperty("carto-dark", "visibility", isNight ? "visible" : "none");
+
+            const lineColor = isStandard ? "red" : isSatellite ? "orange" : "#ffffff";
+            map.setPaintProperty("grain-lines", "line-color", lineColor);
         });
 
         const countrySelect = document.getElementById("country-select");
@@ -344,7 +369,7 @@
 
         countrySelect.addEventListener("change", () => {
             if (countrySelect.value === "global") {
-                map.flyTo({ center: [0, 20], zoom: 1 });
+                map.flyTo({ center: [0, 20], zoom: 2 });
                 setGlobalStats();
                 return;
             }

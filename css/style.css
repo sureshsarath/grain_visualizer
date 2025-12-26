@@ -6,7 +6,7 @@
   --surface-hover: #f1f5f9;
 
   --text-main: #1e293b;
-  --text-muted: #64748b;
+  --text-muted: #3d3d3d;
 
   --primary-color: #3b82f6;
   --primary-bg: #eff6ff;
@@ -14,7 +14,7 @@
   --border-color: #e2e8f0;
 
   /* Layout */
-  --header-height: 64px;
+  --header-height: 54px;
   --footer-height: 48px;
   --sidebar-width: 360px;
   /* Slightly wider for better card spacing */
@@ -60,7 +60,7 @@ body {
 /* Header - Elevated */
 header {
   grid-area: header;
-  background-color: var(--surface-main);
+  background-color: #0F83FA;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -73,7 +73,7 @@ header {
 .header-title {
   font-size: 1.25rem;
   font-weight: 400;
-  color: var(--text-main);
+  color: #fff;
   letter-spacing: -0.025em;
 }
 
@@ -82,13 +82,13 @@ header {
 }
 
 .brand-muted {
-  color: var(--text-muted);
+  color: #f3f3f3;
   font-weight: 400;
 }
 
 .header-nav a {
   text-decoration: none;
-  color: var(--text-muted);
+  color: #fff;
   font-size: 0.875rem;
   font-weight: 500;
   margin-left: 24px;
@@ -98,8 +98,8 @@ header {
 }
 
 .header-nav a:hover {
-  background-color: var(--surface-hover);
-  color: var(--primary-color);
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
 }
 
 /* Sidebar - Surface */
@@ -308,6 +308,37 @@ select.grain-input:focus {
   gap: 12px;
 }
 
+.map-logo {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  width: 0;
+  height: 0;
+}
+
+.map-logo img {
+  display: block;
+  position: absolute;
+  width: 90px;
+  height: auto;
+}
+
+.map-logo .logo-saswe {
+  width: 92px;
+  right: 2px;
+  bottom: 1px;
+}
+
+.map-logo .logo-uw {
+  width: 80px;
+  right: 10px;
+  bottom: 90px;
+}
+
 .map-control-card span {
   font-weight: 600;
   font-size: 0.875rem;
@@ -328,7 +359,7 @@ footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding: 0 10px;
   z-index: 30;
   /* Should be above map */
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
@@ -339,6 +370,7 @@ footer {
   display: flex;
   gap: 32px;
 }
+
 
 .footer-logo-text {
   font-size: 0.875rem;
@@ -387,6 +419,13 @@ footer {
   border: none !important;
   margin-top: 16px !important;
   margin-right: 16px !important;
+}
+
+.maplibregl-ctrl-bottom-right {
+  bottom: auto !important;
+  right: 8px !important;
+  left: auto !important;
+  top: 104px !important;
 }
 
 .debug {
