@@ -23,7 +23,7 @@
     <header>
         <div class="header-title"><span class="brand-strong">GRAIN</span> <span class="brand-muted">Visualizer</span></div>
         <nav class="header-nav">
-            <a href="https://grain-canals.readthedocs.io/en/latest/" target="_blank" rel="noopener">Documentation</a>
+            <a class="header-doc-link" href="https://grain-canals.readthedocs.io/en/latest/" target="_blank" rel="noopener">Documentation</a>
             <a href="disclaimer.html" target="_blank" rel="noopener">Disclaimer</a>
         </nav>
     </header>
@@ -94,13 +94,19 @@
                 <option value="night">Night</option>
             </select>
         </div>
+        <div class="map-control-card map-toggle-card">
+            <label class="canal-toggle">
+                <span class="canal-toggle-text">Toggle canals</span>
+                <input type="checkbox" id="canals-toggle" class="canal-switch-input" checked />
+                <span class="canal-switch" aria-hidden="true"></span>
+            </label>
+        </div>
         <div class="map-logo">
             <a href="https://saswe.net" target="_blank" rel="noopener">
                 <img class="logo-saswe" src="assets/saswe_logo.png" alt="SASWE logo" />
             </a>
             <img class="logo-uw" src="assets/uw_logo.png" alt="University of Washington logo" />
         </div>
-        <div class="debug" id="debug">Booting…</div>
     </main>
 
     <!-- 4. Footer -->
@@ -124,9 +130,6 @@
     <script src="https://unpkg.com/pmtiles@3.2.0/dist/pmtiles.js"></script>
 
     <script>
-        const debugEl = document.getElementById("debug");
-        debugEl.textContent = "Registering PMTiles protocol…";
-
         // 1️⃣ Register PMTiles protocol BEFORE creating map
         const protocol = new pmtiles.Protocol();
         maplibregl.addProtocol("pmtiles", protocol.tile);
@@ -136,8 +139,6 @@
         // 2️⃣ PMTiles URL (long path, as requested)
         const PMTILES_URL =
             "https://pub-9a261f2211db4953b44c3cb6016ab4e8.r2.dev/pmtiles/v1.0/grain_global_v1_0.pmtiles";
-
-        debugEl.textContent = "Creating map…";
 
         // 3️⃣ Create map with simple OSM basemap
         const map = new maplibregl.Map({
@@ -175,16 +176,21 @@
                 ]
             },
             center: [0, 20],
-            zoom: 2
+            zoom: 1
         });
 
         map.addControl(new maplibregl.NavigationControl(), "top-right");
         const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true });
+        const baseLineWidthExpr = [
+            "interpolate", ["linear"], ["zoom"],
+            2, 1,
+            5, 1.0,
+            8, 1.2,
+            12, 2.3
+        ];
 
         // 4️⃣ Add PMTiles vector source + layer
         map.on("load", () => {
-            debugEl.textContent = "Basemap loaded. Adding GRAIN PMTiles…";
-
             map.addSource("grain", {
                 type: "vector",
                 url: `pmtiles://${PMTILES_URL}`
@@ -200,17 +206,13 @@
                 source: "grain",
                 "source-layer": sourceLayer,
                 paint: {
-                    "line-color": "red", /* Tailwind blue-600 */
+                    "line-color": "blue", /* Tailwind blue-600 */
                     "line-opacity": 0.9,
-                    "line-width": [
-                        "interpolate", ["linear"], ["zoom"],
-                        2, 1,
-                        5, 0.6,
-                        8, 1.2,
-                        12, 2.5
-                    ]
+                    "line-width": baseLineWidthExpr
                 }
             });
+
+            setCanalsVisibility();
 
             map.on("mouseenter", "grain-lines", () => {
                 map.getCanvas().style.cursor = "pointer";
@@ -247,22 +249,46 @@
                     .addTo(map);
             });
 
-            debugEl.textContent = "GRAIN data loaded from Cloudflare R2.";
         });
 
         // 5️⃣ Explicit error handling
         map.on("error", (e) => {
             console.error("MapLibre error:", e);
-            debugEl.textContent =
-                "Map error: " + (e?.error?.message || "see console");
         });
 
         map.on("sourcedata", (e) => {
             if (e.sourceId === "grain" && (e.isSourceLoaded || e.loaded)) {
                 // sourceLoaded event can be spammy, but useful to confirm
-                // debugEl.textContent = "GRAIN PMTiles loaded ✅";
             }
         });
+
+        let baseLineColor = "blue";
+        let selectedCountryIso = null;
+
+        const updateGrainLineStyle = () => {
+            if (!map.getLayer("grain-lines")) {
+                return;
+            }
+
+            if (selectedCountryIso) {
+                map.setPaintProperty("grain-lines", "line-color", [
+                    "match",
+                    ["get", "country_iso"],
+                    selectedCountryIso,
+                    "red",
+                    baseLineColor
+                ]);
+                map.setPaintProperty("grain-lines", "line-width", [
+                    "case",
+                    ["==", ["get", "country_iso"], selectedCountryIso],
+                    ["*", 1.6, baseLineWidthExpr],
+                    baseLineWidthExpr
+                ]);
+            } else {
+                map.setPaintProperty("grain-lines", "line-color", baseLineColor);
+                map.setPaintProperty("grain-lines", "line-width", baseLineWidthExpr);
+            }
+        };
 
         const basemapSelect = document.getElementById("basemap-select");
         basemapSelect.addEventListener("change", () => {
@@ -275,9 +301,23 @@
             map.setLayoutProperty("esri-imagery", "visibility", isSatellite ? "visible" : "none");
             map.setLayoutProperty("carto-dark", "visibility", isNight ? "visible" : "none");
 
-            const lineColor = isStandard ? "red" : isSatellite ? "orange" : "#ffffff";
-            map.setPaintProperty("grain-lines", "line-color", lineColor);
+            baseLineColor = isStandard ? "blue" : isSatellite ? "orange" : "#ffffff";
+            updateGrainLineStyle();
         });
+
+        const canalsToggle = document.getElementById("canals-toggle");
+        const setCanalsVisibility = () => {
+            if (!map.getLayer("grain-lines")) {
+                return;
+            }
+            map.setLayoutProperty(
+                "grain-lines",
+                "visibility",
+                canalsToggle.checked ? "visible" : "none"
+            );
+        };
+
+        canalsToggle.addEventListener("change", setCanalsVisibility);
 
         const countrySelect = document.getElementById("country-select");
         let countryFeatures = [];
@@ -369,8 +409,10 @@
 
         countrySelect.addEventListener("change", () => {
             if (countrySelect.value === "global") {
-                map.flyTo({ center: [0, 20], zoom: 2 });
+                map.flyTo({ center: [0, 20], zoom: 1 });
                 setGlobalStats();
+                selectedCountryIso = null;
+                updateGrainLineStyle();
                 return;
             }
 
@@ -378,6 +420,8 @@
                 (feature) => feature?.properties?.name === countrySelect.value
             );
             const point = selected?.properties?.geo_point_2d;
+            selectedCountryIso = selected?.properties?.iso3 || null;
+            updateGrainLineStyle();
             if (!point || typeof point.lon !== "number" || typeof point.lat !== "number") {
                 return;
             }
